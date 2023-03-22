@@ -71,12 +71,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LibraryPath>C:\Users\tai_k\workspace\practice-bullet\external\bullet3\lib\x64\Debug;$(LibraryPath)</LibraryPath>
-    <IncludePath>C:\Users\tai_k\workspace\practice-bullet\external\bullet3\src;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)external\bullet3\lib\x64\Debug;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)external\bullet3\src;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\Users\tai_k\workspace\practice-bullet\external\bullet3\src;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\tai_k\workspace\practice-bullet\external\bullet3\lib\x64\Release;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)external\bullet3\src;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)external\bullet3\lib\x64\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
