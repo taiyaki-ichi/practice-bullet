@@ -3,4 +3,47 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <Filter Include="dx12w">
+      <UniqueIdentifier>{dad97e27-668d-4984-ab7d-6db210b59574}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\external\directx12-wrapper\dx12w\dx12w.hpp">
+      <Filter>dx12w</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\directx12-wrapper\dx12w\dx12w_command_manager.hpp">
+      <Filter>dx12w</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\directx12-wrapper\dx12w\dx12w_create_view.hpp">
+      <Filter>dx12w</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\directx12-wrapper\dx12w\dx12w_descriptor_heap.hpp">
+      <Filter>dx12w</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\directx12-wrapper\dx12w\dx12w_device.hpp">
+      <Filter>dx12w</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\directx12-wrapper\dx12w\dx12w_pipeline_state.hpp">
+      <Filter>dx12w</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\directx12-wrapper\dx12w\dx12w_resource.hpp">
+      <Filter>dx12w</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\directx12-wrapper\dx12w\dx12w_root_signature.hpp">
+      <Filter>dx12w</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\directx12-wrapper\dx12w\dx12w_shader.hpp">
+      <Filter>dx12w</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\directx12-wrapper\dx12w\dx12w_swap_chain.hpp">
+      <Filter>dx12w</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\directx12-wrapper\dx12w\dx12w_utility.hpp">
+      <Filter>dx12w</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\directx12-wrapper\dx12w\dx12w_window.hpp">
+      <Filter>dx12w</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>
