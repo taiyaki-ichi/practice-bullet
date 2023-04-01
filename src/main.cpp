@@ -81,26 +81,26 @@ int main()
 		return dx12w::load_blob(shaderFile);
 	}();
 
-	std::ifstream sphereFile{ "data/sphere.obj" };
-	auto sphereVertexData = load_obj(sphereFile);
+	std::ifstream file{ "data/cube.obj" };
+	auto vertexData = load_obj(file);
 
 	// 球の頂点データ
-	auto sphereVertexResource = [&device, &sphereVertexData]() {
-		auto result = dx12w::create_commited_upload_buffer_resource(device.get(), sizeof(decltype(sphereVertexData)::value_type) * sphereVertexData.size());
+	auto vertexResource = [&device, &vertexData]() {
+		auto result = dx12w::create_commited_upload_buffer_resource(device.get(), sizeof(decltype(vertexData)::value_type) * vertexData.size());
 
 		float* tmp = nullptr;
 		result.first->Map(0, nullptr, reinterpret_cast<void**>(&tmp));
-		std::copy(&sphereVertexData[0][0], &sphereVertexData[0][0] + sphereVertexData.size() * 6, tmp);
+		std::copy(&vertexData[0][0], &vertexData[0][0] + vertexData.size() * 6, tmp);
 		result.first->Unmap(0, nullptr);
 
 		return result;
 	}();
 
 	// pmxxの頂点バッファのビュー
-	D3D12_VERTEX_BUFFER_VIEW sphereVertexBufferView{
-		.BufferLocation = sphereVertexResource.first->GetGPUVirtualAddress(),
-		.SizeInBytes = static_cast<UINT>(sizeof(decltype(sphereVertexData)::value_type) * sphereVertexData.size()),
-		.StrideInBytes = static_cast<UINT>(sizeof(decltype(sphereVertexData)::value_type)),
+	D3D12_VERTEX_BUFFER_VIEW vertexBufferView{
+		.BufferLocation = vertexResource.first->GetGPUVirtualAddress(),
+		.SizeInBytes = static_cast<UINT>(sizeof(decltype(vertexData)::value_type) * vertexData.size()),
+		.StrideInBytes = static_cast<UINT>(sizeof(decltype(vertexData)::value_type)),
 	};
 
 	//
@@ -278,8 +278,8 @@ int main()
 		}
 		commandManager->get_list()->SetGraphicsRootDescriptorTable(0, frameBufferDescriptorHeapCBVSRVUAV.get_GPU_handle(0));
 
-		commandManager->get_list()->IASetVertexBuffers(0, 1, &sphereVertexBufferView);
-		commandManager->get_list()->DrawInstanced(sphereVertexData.size(), 1, 0, 0);
+		commandManager->get_list()->IASetVertexBuffers(0, 1, &vertexBufferView);
+		commandManager->get_list()->DrawInstanced(vertexData.size(), 1, 0, 0);
 
 		//
 		// Imguiの描画
