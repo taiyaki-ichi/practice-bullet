@@ -1,8 +1,13 @@
 
 struct CameraData
 {
-	matrix view;
-	matrix proj;
+	matrix viewProj;
+};
+
+struct VSOutput
+{
+	float4 position : SV_POSITION;
+	float4 normal : NORMAL;
 };
 
 

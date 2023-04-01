@@ -1,6 +1,10 @@
 #include"Header.hlsli"
 
-float4 main(float4 pos : POSITION, float4 normal : NORMAL, float2 uv : TEXCOORD) : SV_POSITION
+VSOutput main(float4 pos : POSITION, float4 normal : NORMAL) 
 {
-	return pos;
+	VSOutput output;
+	output.position = mul(cameraData.viewProj, pos);
+	output.normal = normal;
+
+	return output;
 }

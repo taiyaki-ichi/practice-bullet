@@ -20,8 +20,7 @@ constexpr DXGI_FORMAT DEPTH_BUFFER_FORMAT = DXGI_FORMAT_D32_FLOAT;
 
 struct CameraData
 {
-	XMMATRIX view{};
-	XMMATRIX proj{};
+	XMMATRIX viewProj{};
 };
 
 
@@ -83,8 +82,26 @@ int main()
 	}();
 
 	std::ifstream sphereFile{ "data/sphere.obj" };
-	auto sphereData = load_obj(sphereFile);
+	auto sphereVertexData = load_obj(sphereFile);
 
+	// 球の頂点データ
+	auto sphereVertexResource = [&device, &sphereVertexData]() {
+		auto result = dx12w::create_commited_upload_buffer_resource(device.get(), sizeof(decltype(sphereVertexData)::value_type) * sphereVertexData.size());
+
+		float* tmp = nullptr;
+		result.first->Map(0, nullptr, reinterpret_cast<void**>(&tmp));
+		std::copy(&sphereVertexData[0][0], &sphereVertexData[0][0] + sphereVertexData.size() * 6, tmp);
+		result.first->Unmap(0, nullptr);
+
+		return result;
+	}();
+
+	// pmxxの頂点バッファのビュー
+	D3D12_VERTEX_BUFFER_VIEW sphereVertexBufferView{
+		.BufferLocation = sphereVertexResource.first->GetGPUVirtualAddress(),
+		.SizeInBytes = static_cast<UINT>(sizeof(decltype(sphereVertexData)::value_type) * sphereVertexData.size()),
+		.StrideInBytes = static_cast<UINT>(sizeof(decltype(sphereVertexData)::value_type)),
+	};
 
 	//
 	// デスクリプタヒープ
@@ -129,7 +146,7 @@ int main()
 
 	// pmxをフレームバッファに描画する際のグラフィクスパイプライン
 	auto pmx_graphics_pipeline_state = dx12w::create_graphics_pipeline(device.get(), rootSignature.get(),
-		{ { "POSITION",DXGI_FORMAT_R32G32B32_FLOAT },{ "NORMAL",DXGI_FORMAT_R32G32B32_FLOAT },{ "TEXCOORD",DXGI_FORMAT_R32G32_FLOAT } },
+		{ { "POSITION",DXGI_FORMAT_R32G32B32_FLOAT },{ "NORMAL",DXGI_FORMAT_R32G32B32_FLOAT } },
 		{ FRAME_BUFFER_FORMAT }, { {vertexShader.data(),vertexShader.size()},{indexShader.data(),indexShader.size()} },
 		true, true, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 
@@ -176,13 +193,13 @@ int main()
 		.bottom = static_cast<LONG>(WINDOW_HEIGHT),
 	};
 
-	XMFLOAT3 eye{ 0.f,14.f,-16.f };
-	XMFLOAT3 target{ 0.f,10.f,0.f };
+	XMFLOAT3 eye{ 0.f,0.f,-10.f };
+	XMFLOAT3 target{ 0.f,0.f,0.f };
 	XMFLOAT3 up{ 0,1,0 };
 	float asspect = static_cast<float>(WINDOW_WIDTH) / static_cast<float>(WINDOW_HEIGHT);
-	float view_angle = XM_PIDIV2;
-	float camera_near_z = 0.01f;
-	float camera_far_z = 1000.f;
+	float viewAngle = XM_PIDIV2;
+	float cameraNearZ = 0.01f;
+	float cameraFarZ = 1000.f;
 
 
 	//
@@ -211,6 +228,19 @@ int main()
 		// Rendering
 		ImGui::Render();
 
+
+		//
+		// 定数の更新
+		//
+
+		{
+			CameraData* tmp = nullptr;
+			cameraDataResource.first->Map(0, nullptr, reinterpret_cast<void**>(&tmp));
+
+			auto const view = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));;
+			auto const proj = XMMatrixPerspectiveFovLH(viewAngle, asspect, cameraNearZ, cameraFarZ);
+			tmp->viewProj = view * proj;
+		}
 
 		//
 		// フレームバッファへの描画の準備
@@ -248,7 +278,8 @@ int main()
 		}
 		commandManager->get_list()->SetGraphicsRootDescriptorTable(0, frameBufferDescriptorHeapCBVSRVUAV.get_GPU_handle(0));
 
-
+		commandManager->get_list()->IASetVertexBuffers(0, 1, &sphereVertexBufferView);
+		commandManager->get_list()->DrawInstanced(sphereVertexData.size(), 1, 0, 0);
 
 		//
 		// Imguiの描画
