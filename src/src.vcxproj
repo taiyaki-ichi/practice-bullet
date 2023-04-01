@@ -93,6 +93,9 @@
     <FxCompile>
       <ObjectFileOutput>$(OutDir)%(RelativeDir)%(Filename).cso</ObjectFileOutput>
     </FxCompile>
+    <PostBuildEvent>
+      <Command>xcopy "$(ProjectDir)..\data\*" "$(OutDir)\data" /i /s /y </Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -113,6 +116,9 @@
     <FxCompile>
       <ObjectFileOutput>$(OutDir)%(RelativeDir)%(Filename).cso</ObjectFileOutput>
     </FxCompile>
+    <PostBuildEvent>
+      <Command>xcopy "$(ProjectDir)..\data\*" "$(OutDir)\data" /i /s /y </Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -131,6 +137,9 @@
     <FxCompile>
       <ObjectFileOutput>$(OutDir)%(RelativeDir)%(Filename).cso</ObjectFileOutput>
     </FxCompile>
+    <PostBuildEvent>
+      <Command>xcopy "$(ProjectDir)..\data\*" "$(OutDir)\data" /i /s /y </Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -153,6 +162,9 @@
     <FxCompile>
       <ObjectFileOutput>$(OutDir)%(RelativeDir)%(Filename).cso</ObjectFileOutput>
     </FxCompile>
+    <PostBuildEvent>
+      <Command>xcopy "$(ProjectDir)..\data\*" "$(OutDir)\data" /i /s /y </Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\external\imgui\imgui.cpp" />
@@ -185,6 +197,7 @@
     <ClInclude Include="..\external\imgui\imstb_rectpack.h" />
     <ClInclude Include="..\external\imgui\imstb_textedit.h" />
     <ClInclude Include="..\external\imgui\imstb_truetype.h" />
+    <ClInclude Include="obj_loader.hpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shader\PixelShader.hlsl">

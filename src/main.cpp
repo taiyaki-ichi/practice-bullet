@@ -4,6 +4,8 @@
 #include"../external/imgui/imgui_impl_win32.h"
 #include<DirectXMath.h>
 #include<fstream>
+#include"obj_loader.hpp"
+
 
 using namespace DirectX;
 
@@ -79,6 +81,10 @@ int main()
 		std::ifstream shaderFile{ L"shader/PixelShader.cso",std::ios::binary };
 		return dx12w::load_blob(shaderFile);
 	}();
+
+	std::ifstream sphereFile{ "data/sphere.obj" };
+	auto sphereData = load_obj(sphereFile);
+
 
 	//
 	// デスクリプタヒープ
@@ -182,8 +188,10 @@ int main()
 	//
 	// メインループ
 	//
+
 	while (dx12w::update_window())
 	{
+
 		//
 		// ImGUIの準備
 		//
@@ -202,6 +210,7 @@ int main()
 
 		// Rendering
 		ImGui::Render();
+
 
 		//
 		// フレームバッファへの描画の準備
@@ -223,6 +232,7 @@ int main()
 
 		commandManager->get_list()->RSSetViewports(1, &viewport);
 		commandManager->get_list()->RSSetScissorRects(1, &scissorRect);
+
 
 		//
 		// オブジェクトを描画

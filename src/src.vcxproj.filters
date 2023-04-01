@@ -96,6 +96,7 @@
     <ClInclude Include="..\external\imgui\imstb_truetype.h">
       <Filter>imgui</Filter>
     </ClInclude>
+    <ClInclude Include="obj_loader.hpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shader\PixelShader.hlsl">
