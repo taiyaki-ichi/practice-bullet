@@ -99,6 +99,7 @@
     <ClInclude Include="obj_loader.hpp" />
     <ClInclude Include="Shape.hpp" />
     <ClInclude Include="CameraData.hpp" />
+    <ClInclude Include="DebugDraw.hpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shader\ShapePixelShader.hlsl">

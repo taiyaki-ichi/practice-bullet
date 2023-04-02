@@ -201,6 +201,7 @@
     <ClInclude Include="..\external\imgui\imstb_rectpack.h" />
     <ClInclude Include="..\external\imgui\imstb_textedit.h" />
     <ClInclude Include="..\external\imgui\imstb_truetype.h" />
+    <ClInclude Include="DebugDraw.hpp" />
     <ClInclude Include="obj_loader.hpp" />
     <ClInclude Include="Shape.hpp" />
     <ClInclude Include="CameraData.hpp" />

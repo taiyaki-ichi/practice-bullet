@@ -2,10 +2,14 @@
 #include"../external/imgui/imgui.h"
 #include"../external/imgui/imgui_impl_dx12.h"
 #include"../external/imgui/imgui_impl_win32.h"
+#include"../external/bullet3/src/btBulletCollisionCommon.h"
+#include"../external/bullet3/src/btBulletDynamicsCommon.h"
 #include<DirectXMath.h>
 #include<fstream>
+#include<chrono>
 #include"obj_loader.hpp"
 #include"Shape.hpp"
+#include"DebugDraw.hpp"
 
 using namespace DirectX;
 
@@ -84,23 +88,131 @@ int main()
 
 
 	//
-	// Box
+	// Shape
 	//
 
 	auto box = std::make_unique<Shape>(device.get(), "data/box.obj", cameraDataResource.first.get(), FRAME_BUFFER_FORMAT);
-	std::vector<ShapeData> boxData = {
-		{XMMatrixTranslation(0.f,0.f,0.f),{1.f,0.f,0.f}},
-		{XMMatrixTranslation(5.f,0.f,0.f),{0.f,1.f,0.f}},
-		{XMMatrixTranslation(0.f,5.f,0.f),{0.f,0.f,1.f}},
-	};
-	box->setBoxData(boxData.begin(), boxData.end());
-
 	auto sphere = std::make_unique<Shape>(device.get(), "data/sphere.obj", cameraDataResource.first.get(), FRAME_BUFFER_FORMAT);
-	std::vector<ShapeData> sphereData = {
-		{XMMatrixTranslation(-5.f,0.f,0.f),{1.f,0.f,0.f}},
-		{XMMatrixTranslation(0.f,-5.f,0.f),{0.f,1.f,0.f}},
-	};
-	sphere->setBoxData(sphereData.begin(), sphereData.end());
+
+	DebugDraw debugDraw{};
+	debugDraw.setDebugMode(btIDebugDraw::DBG_DrawWireframe
+		| btIDebugDraw::DBG_DrawContactPoints
+		| btIDebugDraw::DBG_DrawConstraints);
+
+	//
+	// Bullet
+	//
+
+	///collision configuration contains default setup for memory, collision setup. Advanced users can create their own configuration.
+	btDefaultCollisionConfiguration* collisionConfiguration = new btDefaultCollisionConfiguration();
+
+
+	///use the default collision dispatcher. For parallel processing you can use a diffent dispatcher (see Extras/BulletMultiThreaded)
+	btCollisionDispatcher* dispatcher = new btCollisionDispatcher(collisionConfiguration);
+
+
+	///btDbvtBroadphase is a good general purpose broadphase. You can also try out btAxis3Sweep.
+	btBroadphaseInterface* overlappingPairCache = new btDbvtBroadphase();
+
+
+	///the default constraint solver. For parallel processing you can use a different solver (see Extras/BulletMultiThreaded)
+	btSequentialImpulseConstraintSolver* solver = new btSequentialImpulseConstraintSolver;
+
+
+	btDiscreteDynamicsWorld* dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
+
+
+	dynamicsWorld->setGravity(btVector3(0, -10, 0));
+
+
+	///-----initialization_end-----
+
+
+	//keep track of the shapes, we release memory at exit.
+	//make sure to re-use collision shapes among rigid bodies whenever possible!
+	btAlignedObjectArray<btCollisionShape*> collisionShapes;
+
+
+	///create a few basic rigid bodies
+
+
+	//the ground is a cube of side 100 at position y = -56.
+	//the sphere will hit it at y = -6, with center at -5
+	{
+		btCollisionShape* groundShape = new btBoxShape(btVector3(btScalar(50.), btScalar(50.), btScalar(50.)));
+
+
+		collisionShapes.push_back(groundShape);
+
+
+		btTransform groundTransform;
+		groundTransform.setIdentity();
+		groundTransform.setOrigin(btVector3(0, -56, 0));
+
+
+		btScalar mass(0.);
+
+
+		//rigidbody is dynamic if and only if mass is non zero, otherwise static
+		bool isDynamic = (mass != 0.f);
+
+
+		btVector3 localInertia(0, 0, 0);
+		if (isDynamic)
+			groundShape->calculateLocalInertia(mass, localInertia);
+
+
+		//using motionstate is optional, it provides interpolation capabilities, and only synchronizes 'active' objects
+		btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
+		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, groundShape, localInertia);
+		btRigidBody* body = new btRigidBody(rbInfo);
+
+
+		//add the body to the dynamics world
+		dynamicsWorld->addRigidBody(body);
+	}
+
+
+	{
+		//create a dynamic rigidbody
+
+
+		//btCollisionShape* colShape = new btBoxShape(btVector3(1,1,1));
+		btCollisionShape* colShape = new btSphereShape(btScalar(1.));
+		collisionShapes.push_back(colShape);
+
+
+		/// Create Dynamic Objects
+		btTransform startTransform;
+		startTransform.setIdentity();
+
+
+		btScalar mass(1.f);
+
+
+		//rigidbody is dynamic if and only if mass is non zero, otherwise static
+		bool isDynamic = (mass != 0.f);
+
+
+		btVector3 localInertia(0, 0, 0);
+		if (isDynamic)
+			colShape->calculateLocalInertia(mass, localInertia);
+
+
+		startTransform.setOrigin(btVector3(2, 10, 0));
+
+
+		//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+		btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
+		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
+		btRigidBody* body = new btRigidBody(rbInfo);
+
+
+		dynamicsWorld->addRigidBody(body);
+	}
+
+	// デバック用のインスタンス割当て
+	dynamicsWorld->setDebugDrawer(&debugDraw);
 
 	//
 	// Imguiの設定
@@ -153,6 +265,7 @@ int main()
 	float cameraNearZ = 0.01f;
 	float cameraFarZ = 1000.f;
 
+	auto prevTime = std::chrono::system_clock::now();
 
 	//
 	// メインループ
@@ -160,6 +273,28 @@ int main()
 
 	while (dx12w::update_window())
 	{
+		//
+		// 物理エンジンのシュミレーション
+		//
+
+		auto deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - prevTime).count();
+		if (deltaTime >= 1.f / 60.f * 1000.f)
+		{
+			dynamicsWorld->stepSimulation(deltaTime, 10);
+			prevTime = std::chrono::system_clock::now();
+		}
+
+		//
+		// 物理エンジンの結果を描画するために準備
+		//
+
+		debugDraw.sphereData.clear();
+		debugDraw.boxData.clear();
+
+		dynamicsWorld->debugDrawWorld();
+
+		sphere->setShapeData(debugDraw.sphereData.begin(), debugDraw.sphereData.end());
+		box->setShapeData(debugDraw.boxData.begin(), debugDraw.boxData.end());
 
 		//
 		// ImGUIの準備
@@ -217,6 +352,7 @@ int main()
 
 		box->draw(commandManager->get_list());
 		sphere->draw(commandManager->get_list());
+
 
 		//
 		// Imguiの描画

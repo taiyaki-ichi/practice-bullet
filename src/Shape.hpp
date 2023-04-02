@@ -40,7 +40,7 @@ public:
 	Shape& operator=(Shape&&) = default;
 
 	template<typename Iter>
-	void setBoxData(Iter first, Iter last);
+	void setShapeData(Iter first, Iter last);
 	void draw(ID3D12GraphicsCommandList*);
 };
 
@@ -112,7 +112,7 @@ inline Shape::Shape(ID3D12Device* device, char const* fileName, ID3D12Resource* 
 }
 
 template<typename Iter>
-inline void Shape::setBoxData(Iter first, Iter last)
+inline void Shape::setShapeData(Iter first, Iter last)
 {
 	ShapeData* boxDataPtr = nullptr;
 	boxDataConstantBuffer.first->Map(0, nullptr, reinterpret_cast<void**>(&boxDataPtr));
