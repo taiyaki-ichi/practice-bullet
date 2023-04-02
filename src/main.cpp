@@ -163,12 +163,8 @@ int main()
 		ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();
 
-		bool hoge = true;
-		ImGui::ShowDemoWindow(&hoge);
-
-		ImGui::Begin("Hello, world!");
-		ImGui::Text("This is some useful text.");
-		ImGui::End();
+		ImGui::InputFloat3("eye", &eye.x);
+		ImGui::InputFloat3("target", &target.x);
 
 		// Rendering
 		ImGui::Render();
