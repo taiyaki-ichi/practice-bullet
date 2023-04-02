@@ -93,6 +93,7 @@ int main()
 
 	auto box = std::make_unique<Shape>(device.get(), "data/box.obj", cameraDataResource.first.get(), FRAME_BUFFER_FORMAT);
 	auto sphere = std::make_unique<Shape>(device.get(), "data/sphere.obj", cameraDataResource.first.get(), FRAME_BUFFER_FORMAT);
+	auto capsule = std::make_unique<Shape>(device.get(), "data/capsule.obj", cameraDataResource.first.get(), FRAME_BUFFER_FORMAT);
 
 	DebugDraw debugDraw{};
 	debugDraw.setDebugMode(btIDebugDraw::DBG_DrawWireframe
@@ -122,7 +123,7 @@ int main()
 	btDiscreteDynamicsWorld* dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
 
 
-	dynamicsWorld->setGravity(btVector3(0, -10, 0));
+	dynamicsWorld->setGravity(btVector3(0, -1, 0));
 
 
 	///-----initialization_end-----
@@ -178,14 +179,15 @@ int main()
 
 
 		//btCollisionShape* colShape = new btBoxShape(btVector3(1,1,1));
-		btCollisionShape* colShape = new btSphereShape(btScalar(1.));
+		// btCollisionShape* colShape = new btSphereShape(btScalar(1.));
+		btCollisionShape* colShape = new btCapsuleShape(btScalar(1.), btScalar(3.));
 		collisionShapes.push_back(colShape);
 
 
 		/// Create Dynamic Objects
 		btTransform startTransform;
 		startTransform.setIdentity();
-
+		startTransform.setRotation(btQuaternion(0.f, 0.f, 0.5f, 1.f));
 
 		btScalar mass(1.f);
 
@@ -290,11 +292,13 @@ int main()
 
 		debugDraw.sphereData.clear();
 		debugDraw.boxData.clear();
+		debugDraw.capsuleData.clear();
 
 		dynamicsWorld->debugDrawWorld();
 
 		sphere->setShapeData(debugDraw.sphereData.begin(), debugDraw.sphereData.end());
 		box->setShapeData(debugDraw.boxData.begin(), debugDraw.boxData.end());
+		capsule->setShapeData(debugDraw.capsuleData.begin(), debugDraw.capsuleData.end());
 
 		//
 		// ImGUI‚Ì€”õ
@@ -352,7 +356,7 @@ int main()
 
 		box->draw(commandManager->get_list());
 		sphere->draw(commandManager->get_list());
-
+		capsule->draw(commandManager->get_list());
 
 		//
 		// Imgui‚Ì•`‰æ
