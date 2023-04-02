@@ -31,6 +31,9 @@
     <Filter Include="imgui">
       <UniqueIdentifier>{bae14936-09be-43a4-a69c-f881bb16a081}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shader">
+      <UniqueIdentifier>{ecb0f7ac-0f56-4017-bfd5-14cf7b3bcb35}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\external\directx12-wrapper\dx12w\dx12w.hpp">
@@ -93,5 +96,22 @@
     <ClInclude Include="..\external\imgui\imstb_truetype.h">
       <Filter>imgui</Filter>
     </ClInclude>
+    <ClInclude Include="obj_loader.hpp" />
+    <ClInclude Include="Shape.hpp" />
+    <ClInclude Include="CameraData.hpp" />
+    <ClInclude Include="DebugDraw.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="shader\ShapePixelShader.hlsl">
+      <Filter>shader</Filter>
+    </FxCompile>
+    <FxCompile Include="shader\ShapeVertexShader.hlsl">
+      <Filter>shader</Filter>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shader\ShapeHeader.hlsli">
+      <Filter>shader</Filter>
+    </None>
   </ItemGroup>
 </Project>

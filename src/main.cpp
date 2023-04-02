@@ -2,12 +2,25 @@
 #include"../external/imgui/imgui.h"
 #include"../external/imgui/imgui_impl_dx12.h"
 #include"../external/imgui/imgui_impl_win32.h"
+#include"../external/bullet3/src/btBulletCollisionCommon.h"
+#include"../external/bullet3/src/btBulletDynamicsCommon.h"
+#include<DirectXMath.h>
+#include<fstream>
+#include<chrono>
+#include"obj_loader.hpp"
+#include"Shape.hpp"
+#include"DebugDraw.hpp"
+
+using namespace DirectX;
 
 constexpr std::size_t WINDOW_WIDTH = 960;
 constexpr std::size_t WINDOW_HEIGHT = 640;
 
 constexpr DXGI_FORMAT FRAME_BUFFER_FORMAT = DXGI_FORMAT_R8G8B8A8_UNORM;
 constexpr std::size_t FRAME_BUFFER_NUM = 2;
+
+constexpr DXGI_FORMAT DEPTH_BUFFER_FORMAT = DXGI_FORMAT_D32_FLOAT;
+
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -39,8 +52,24 @@ int main()
 		.Color = {0.5f,0.5f,0.5f,1.f},
 	};
 
+	D3D12_CLEAR_VALUE depthClearValue{
+		.Format = DEPTH_BUFFER_FORMAT,
+		.DepthStencil{.Depth = 1.f}
+	};
+
+
 	auto frameBufferResource = dx12w::get_frame_buffer_resource<FRAME_BUFFER_NUM>(swapChain.get());
 
+	auto depthBuffer = dx12w::create_commited_texture_resource(device.get(), DEPTH_BUFFER_FORMAT, WINDOW_WIDTH, WINDOW_HEIGHT,
+		2, 1, 1, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL, &depthClearValue);
+
+	auto cameraDataResource = dx12w::create_commited_upload_buffer_resource(device.get(), dx12w::alignment<UINT64>(sizeof(CameraData), 256));
+
+
+
+	//
+	// デスクリプタヒープ
+	//
 
 	// フレームバッファのビューを作成する用のデスクリプタヒープ
 	dx12w::descriptor_heap frameBufferDescriptorHeapRTV{};
@@ -51,9 +80,139 @@ int main()
 			dx12w::create_texture2D_RTV(device.get(), frameBufferDescriptorHeapRTV.get_CPU_handle(i), frameBufferResource[i].first.get(), FRAME_BUFFER_FORMAT, 0, 0);
 	}
 
+	auto frameBufferDescriptorHeapDSV = dx12w::create_descriptor_heap(device.get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1);
+	dx12w::create_texture2D_DSV(device.get(), frameBufferDescriptorHeapDSV.get_CPU_handle(0), depthBuffer.first.get(), DEPTH_BUFFER_FORMAT, 0);
+
 	// imgui用のディスクリプタヒープ
 	auto imguiDescriptorHeap = dx12w::create_descriptor_heap(device.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1);
 
+
+	//
+	// Shape
+	//
+
+	auto box = std::make_unique<Shape>(device.get(), "data/box.obj", cameraDataResource.first.get(), FRAME_BUFFER_FORMAT);
+	auto sphere = std::make_unique<Shape>(device.get(), "data/sphere.obj", cameraDataResource.first.get(), FRAME_BUFFER_FORMAT);
+
+	DebugDraw debugDraw{};
+	debugDraw.setDebugMode(btIDebugDraw::DBG_DrawWireframe
+		| btIDebugDraw::DBG_DrawContactPoints
+		| btIDebugDraw::DBG_DrawConstraints);
+
+	//
+	// Bullet
+	//
+
+	///collision configuration contains default setup for memory, collision setup. Advanced users can create their own configuration.
+	btDefaultCollisionConfiguration* collisionConfiguration = new btDefaultCollisionConfiguration();
+
+
+	///use the default collision dispatcher. For parallel processing you can use a diffent dispatcher (see Extras/BulletMultiThreaded)
+	btCollisionDispatcher* dispatcher = new btCollisionDispatcher(collisionConfiguration);
+
+
+	///btDbvtBroadphase is a good general purpose broadphase. You can also try out btAxis3Sweep.
+	btBroadphaseInterface* overlappingPairCache = new btDbvtBroadphase();
+
+
+	///the default constraint solver. For parallel processing you can use a different solver (see Extras/BulletMultiThreaded)
+	btSequentialImpulseConstraintSolver* solver = new btSequentialImpulseConstraintSolver;
+
+
+	btDiscreteDynamicsWorld* dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
+
+
+	dynamicsWorld->setGravity(btVector3(0, -10, 0));
+
+
+	///-----initialization_end-----
+
+
+	//keep track of the shapes, we release memory at exit.
+	//make sure to re-use collision shapes among rigid bodies whenever possible!
+	btAlignedObjectArray<btCollisionShape*> collisionShapes;
+
+
+	///create a few basic rigid bodies
+
+
+	//the ground is a cube of side 100 at position y = -56.
+	//the sphere will hit it at y = -6, with center at -5
+	{
+		btCollisionShape* groundShape = new btBoxShape(btVector3(btScalar(50.), btScalar(50.), btScalar(50.)));
+
+
+		collisionShapes.push_back(groundShape);
+
+
+		btTransform groundTransform;
+		groundTransform.setIdentity();
+		groundTransform.setOrigin(btVector3(0, -56, 0));
+
+
+		btScalar mass(0.);
+
+
+		//rigidbody is dynamic if and only if mass is non zero, otherwise static
+		bool isDynamic = (mass != 0.f);
+
+
+		btVector3 localInertia(0, 0, 0);
+		if (isDynamic)
+			groundShape->calculateLocalInertia(mass, localInertia);
+
+
+		//using motionstate is optional, it provides interpolation capabilities, and only synchronizes 'active' objects
+		btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
+		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, groundShape, localInertia);
+		btRigidBody* body = new btRigidBody(rbInfo);
+
+
+		//add the body to the dynamics world
+		dynamicsWorld->addRigidBody(body);
+	}
+
+
+	{
+		//create a dynamic rigidbody
+
+
+		//btCollisionShape* colShape = new btBoxShape(btVector3(1,1,1));
+		btCollisionShape* colShape = new btSphereShape(btScalar(1.));
+		collisionShapes.push_back(colShape);
+
+
+		/// Create Dynamic Objects
+		btTransform startTransform;
+		startTransform.setIdentity();
+
+
+		btScalar mass(1.f);
+
+
+		//rigidbody is dynamic if and only if mass is non zero, otherwise static
+		bool isDynamic = (mass != 0.f);
+
+
+		btVector3 localInertia(0, 0, 0);
+		if (isDynamic)
+			colShape->calculateLocalInertia(mass, localInertia);
+
+
+		startTransform.setOrigin(btVector3(2, 10, 0));
+
+
+		//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+		btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
+		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
+		btRigidBody* body = new btRigidBody(rbInfo);
+
+
+		dynamicsWorld->addRigidBody(body);
+	}
+
+	// デバック用のインスタンス割当て
+	dynamicsWorld->setDebugDrawer(&debugDraw);
 
 	//
 	// Imguiの設定
@@ -79,10 +238,64 @@ int main()
 
 
 	//
+	// その他設定
+	//
+
+	D3D12_VIEWPORT viewport{
+		.TopLeftX = 0.f,
+		.TopLeftY = 0.f,
+		.Width = static_cast<float>(WINDOW_WIDTH),
+		.Height = static_cast<float>(WINDOW_HEIGHT),
+		.MinDepth = 0.f,
+		.MaxDepth = 1.f,
+	};
+
+	D3D12_RECT scissorRect{
+		.left = 0,
+		.top = 0,
+		.right = static_cast<LONG>(WINDOW_WIDTH),
+		.bottom = static_cast<LONG>(WINDOW_HEIGHT),
+	};
+
+	XMFLOAT3 eye{ 0.f,0.f,-10.f };
+	XMFLOAT3 target{ 0.f,0.f,0.f };
+	XMFLOAT3 up{ 0,1,0 };
+	float asspect = static_cast<float>(WINDOW_WIDTH) / static_cast<float>(WINDOW_HEIGHT);
+	float viewAngle = XM_PIDIV2;
+	float cameraNearZ = 0.01f;
+	float cameraFarZ = 1000.f;
+
+	auto prevTime = std::chrono::system_clock::now();
+
+	//
 	// メインループ
 	//
+
 	while (dx12w::update_window())
 	{
+		//
+		// 物理エンジンのシュミレーション
+		//
+
+		auto deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - prevTime).count();
+		if (deltaTime >= 1.f / 60.f * 1000.f)
+		{
+			dynamicsWorld->stepSimulation(deltaTime, 10);
+			prevTime = std::chrono::system_clock::now();
+		}
+
+		//
+		// 物理エンジンの結果を描画するために準備
+		//
+
+		debugDraw.sphereData.clear();
+		debugDraw.boxData.clear();
+
+		dynamicsWorld->debugDrawWorld();
+
+		sphere->setShapeData(debugDraw.sphereData.begin(), debugDraw.sphereData.end());
+		box->setShapeData(debugDraw.boxData.begin(), debugDraw.boxData.end());
+
 		//
 		// ImGUIの準備
 		//
@@ -92,18 +305,28 @@ int main()
 		ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();
 
-		bool hoge = true;
-		ImGui::ShowDemoWindow(&hoge);
-
-		ImGui::Begin("Hello, world!");
-		ImGui::Text("This is some useful text.");
-		ImGui::End();
+		ImGui::InputFloat3("eye", &eye.x);
+		ImGui::InputFloat3("target", &target.x);
 
 		// Rendering
 		ImGui::Render();
 
+
 		//
+		// 定数の更新
 		//
+
+		{
+			CameraData* tmp = nullptr;
+			cameraDataResource.first->Map(0, nullptr, reinterpret_cast<void**>(&tmp));
+
+			auto const view = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));;
+			auto const proj = XMMatrixPerspectiveFovLH(viewAngle, asspect, cameraNearZ, cameraFarZ);
+			tmp->viewProj = view * proj;
+		}
+
+		//
+		// フレームバッファへの描画の準備
 		//
 
 		auto backBufferIndex = swapChain->GetCurrentBackBufferIndex();
@@ -111,10 +334,25 @@ int main()
 		commandManager->reset_list(0);
 
 		dx12w::resource_barrior(commandManager->get_list(), frameBufferResource[backBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET);
-		commandManager->get_list()->ClearRenderTargetView(frameBufferDescriptorHeapRTV.get_CPU_handle(backBufferIndex), grayClearValue.Color, 0, nullptr);
+		dx12w::resource_barrior(commandManager->get_list(), depthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
-		auto frame_buffer_cpu_handle = frameBufferDescriptorHeapRTV.get_CPU_handle(backBufferIndex);
-		commandManager->get_list()->OMSetRenderTargets(1, &frame_buffer_cpu_handle, false, nullptr);
+		commandManager->get_list()->ClearRenderTargetView(frameBufferDescriptorHeapRTV.get_CPU_handle(backBufferIndex), grayClearValue.Color, 0, nullptr);
+		commandManager->get_list()->ClearDepthStencilView(frameBufferDescriptorHeapDSV.get_CPU_handle(), D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, nullptr);
+
+		auto rtvCpuHandle = frameBufferDescriptorHeapRTV.get_CPU_handle(backBufferIndex);
+		auto dsvCpuHandle = frameBufferDescriptorHeapDSV.get_CPU_handle(0);
+		commandManager->get_list()->OMSetRenderTargets(1, &rtvCpuHandle, false, &dsvCpuHandle);
+
+		commandManager->get_list()->RSSetViewports(1, &viewport);
+		commandManager->get_list()->RSSetScissorRects(1, &scissorRect);
+
+		//
+		// 描画
+		//
+
+		box->draw(commandManager->get_list());
+		sphere->draw(commandManager->get_list());
+
 
 		//
 		// Imguiの描画
@@ -123,7 +361,10 @@ int main()
 		commandManager->get_list()->SetDescriptorHeaps(1, &imguiDescriptorHeapPtr);
 		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandManager->get_list());
 
+
 		dx12w::resource_barrior(commandManager->get_list(), frameBufferResource[backBufferIndex], D3D12_RESOURCE_STATE_COMMON);
+		dx12w::resource_barrior(commandManager->get_list(), depthBuffer, D3D12_RESOURCE_STATE_COMMON);
+
 
 		commandManager->get_list()->Close();
 		commandManager->excute();
