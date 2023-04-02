@@ -10,6 +10,7 @@ struct DebugDraw : public btIDebugDraw
 {
 	std::vector<ShapeData> sphereData{};
 	std::vector<ShapeData> boxData{};
+	std::vector<ShapeData> capsuleData{};
 
 	void drawSphere(btScalar radius, const btTransform& transform, const btVector3& color) override
 	{
@@ -58,6 +59,28 @@ struct DebugDraw : public btIDebugDraw
 		boxData.emplace_back(
 			XMMatrixScaling(x, y, z) * XMMatrixTranslation(centerX, centerY, centerZ) *
 			XMMatrixRotationQuaternion(q) * XMMatrixTranslation(trans.getOrigin().x(), trans.getOrigin().y(), trans.getOrigin().z()),
+			std::array<float, 3>{ static_cast<float>(color.x()), static_cast<float>(color.y()), static_cast<float>(color.z()) }
+		);
+	}
+
+	void drawCapsule(btScalar radius, btScalar halfHeight, int upAxis, const btTransform& transform, const btVector3& color) override
+	{
+		auto axis = XMMatrixIdentity();
+		// xé≤Ç™è„
+		if (upAxis == 0) {
+			axis = XMMatrixRotationZ(XM_PIDIV2);
+		}
+		// zé≤Ç™è„
+		else if (upAxis == 2)
+		{
+			axis = XMMatrixRotationX(XM_PIDIV2);
+		}
+
+		XMVECTOR q{ transform.getRotation().x(),transform.getRotation().y(), transform.getRotation().z(), transform.getRotation().w() };
+
+		capsuleData.emplace_back(
+			XMMatrixScaling(radius, halfHeight, radius) * axis *
+			XMMatrixRotationQuaternion(q) * XMMatrixTranslation(transform.getOrigin().x(), transform.getOrigin().y(), transform.getOrigin().z()),
 			std::array<float, 3>{ static_cast<float>(color.x()), static_cast<float>(color.y()), static_cast<float>(color.z()) }
 		);
 	}
