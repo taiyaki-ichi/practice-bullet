@@ -7,13 +7,13 @@
 
 constexpr std::size_t MAX_BOX_NUM = 256;
 
-struct BoxData
+struct ShapeData
 {
 	DirectX::XMMATRIX transform{};
 	std::array<float, 3> color{};
 };
 
-class Box
+class Shape
 {
 	dx12w::resource_and_state vertexResource{};
 	D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
@@ -32,12 +32,12 @@ class Box
 	UINT boxNum{};
 
 public:
-	Box(ID3D12Device*,ID3D12Resource* cameraDataResource,DXGI_FORMAT rendererFormat);
-	virtual ~Box() = default;
-	Box(Box&) = delete;
-	Box& operator=(Box const&) = delete;
-	Box(Box&&) = default;
-	Box& operator=(Box&&) = default;
+	Shape(ID3D12Device*, char const* fileName, ID3D12Resource* cameraDataResource, DXGI_FORMAT rendererFormat);
+	virtual ~Shape() = default;
+	Shape(Shape&) = delete;
+	Shape& operator=(Shape const&) = delete;
+	Shape(Shape&&) = default;
+	Shape& operator=(Shape&&) = default;
 
 	template<typename Iter>
 	void setBoxData(Iter first, Iter last);
@@ -49,11 +49,11 @@ public:
 // 以下、定義
 //
 
-inline Box::Box(ID3D12Device* device, ID3D12Resource* cameraDataResource, DXGI_FORMAT rendererFormat)
+inline Shape::Shape(ID3D12Device* device, char const* fileName, ID3D12Resource* cameraDataResource, DXGI_FORMAT rendererFormat)
 {
 	// 頂点データ
 	{
-		std::ifstream file{ "data/box.obj" };
+		std::ifstream file{ fileName };
 		auto vertexData = load_obj(file);
 
 		vertexResource = dx12w::create_commited_upload_buffer_resource(device, sizeof(decltype(vertexData)::value_type) * vertexData.size());
@@ -74,19 +74,19 @@ inline Box::Box(ID3D12Device* device, ID3D12Resource* cameraDataResource, DXGI_F
 
 	// 頂点シェーダ
 	{
-		std::ifstream shaderFile{ L"shader/BoxVertexShader.cso",std::ios::binary };
+		std::ifstream shaderFile{ L"shader/ShapeVertexShader.cso",std::ios::binary };
 		vertexShader = dx12w::load_blob(shaderFile);
 	}
 
 	// ピクセルシェーダ
 	{
-		std::ifstream shaderFile{ L"shader/BoxPixelShader.cso",std::ios::binary };
+		std::ifstream shaderFile{ L"shader/ShapePixelShader.cso",std::ios::binary };
 		pixelShader = dx12w::load_blob(shaderFile);
 	}
 
 	// 定数バッファ
 	{
-		boxDataConstantBuffer = dx12w::create_commited_upload_buffer_resource(device, dx12w::alignment<UINT64>(sizeof(BoxData), 256));
+		boxDataConstantBuffer = dx12w::create_commited_upload_buffer_resource(device, dx12w::alignment<UINT64>(sizeof(ShapeData), 256));
 	}
 
 	// ディスクリプタヒープ
@@ -94,7 +94,7 @@ inline Box::Box(ID3D12Device* device, ID3D12Resource* cameraDataResource, DXGI_F
 		descriptorHeapCBVSRVUAV.initialize(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2);
 
 		dx12w::create_CBV(device, descriptorHeapCBVSRVUAV.get_CPU_handle(0), cameraDataResource, dx12w::alignment<UINT64>(sizeof(CameraData), 256));
-		dx12w::create_CBV(device, descriptorHeapCBVSRVUAV.get_CPU_handle(1), boxDataConstantBuffer.first.get(), dx12w::alignment<UINT64>(sizeof(BoxData), 256));
+		dx12w::create_CBV(device, descriptorHeapCBVSRVUAV.get_CPU_handle(1), boxDataConstantBuffer.first.get(), dx12w::alignment<UINT64>(sizeof(ShapeData), 256));
 	}
 
 	// ルートシグネチャ
@@ -112,16 +112,16 @@ inline Box::Box(ID3D12Device* device, ID3D12Resource* cameraDataResource, DXGI_F
 }
 
 template<typename Iter>
-inline void Box::setBoxData(Iter first, Iter last)
+inline void Shape::setBoxData(Iter first, Iter last)
 {
-	BoxData* boxDataPtr = nullptr;
+	ShapeData* boxDataPtr = nullptr;
 	boxDataConstantBuffer.first->Map(0, nullptr, reinterpret_cast<void**>(&boxDataPtr));
 
 	std::copy(first, last, boxDataPtr);
 	boxNum = std::distance(first, last);
 }
 
-inline void Box::draw(ID3D12GraphicsCommandList* list)
+inline void Shape::draw(ID3D12GraphicsCommandList* list)
 {
 	list->SetGraphicsRootSignature(rootSignature.get());
 	list->SetPipelineState(graphicsPipeline.get());

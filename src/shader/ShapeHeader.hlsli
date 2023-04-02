@@ -1,4 +1,13 @@
-#include"CameraData.hlsli"
+
+struct CameraData
+{
+	matrix viewProj;
+};
+
+cbuffer CameraDataConstantBuffer : register(b0)
+{
+	CameraData cameraData;
+}
 
 struct VSOutput
 {
@@ -9,7 +18,7 @@ struct VSOutput
 
 #define MAX_BOX_NUM 256
 
-struct BoxData
+struct ShapeData
 {
 	matrix transform;
 	float3 color;
@@ -17,5 +26,5 @@ struct BoxData
 
 cbuffer BoxDataConstantBuffer : register(b1)
 {
-	BoxData boxData[MAX_BOX_NUM];
+	ShapeData boxData[MAX_BOX_NUM];
 }

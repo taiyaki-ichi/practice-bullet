@@ -1,4 +1,4 @@
-#include"BoxHeader.hlsli"
+#include"ShapeHeader.hlsli"
 
 VSOutput main(float4 pos : POSITION, float4 normal : NORMAL, uint instanceId : SV_InstanceId)
 {

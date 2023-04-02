@@ -5,7 +5,7 @@
 #include<DirectXMath.h>
 #include<fstream>
 #include"obj_loader.hpp"
-#include"Box.hpp"
+#include"Shape.hpp"
 
 using namespace DirectX;
 
@@ -87,13 +87,20 @@ int main()
 	// Box
 	//
 
-	auto box = std::make_unique<Box>(device.get(), cameraDataResource.first.get(), FRAME_BUFFER_FORMAT);
-	std::vector<BoxData> boxData = {
+	auto box = std::make_unique<Shape>(device.get(), "data/box.obj", cameraDataResource.first.get(), FRAME_BUFFER_FORMAT);
+	std::vector<ShapeData> boxData = {
 		{XMMatrixTranslation(0.f,0.f,0.f),{1.f,0.f,0.f}},
 		{XMMatrixTranslation(5.f,0.f,0.f),{0.f,1.f,0.f}},
 		{XMMatrixTranslation(0.f,5.f,0.f),{0.f,0.f,1.f}},
 	};
 	box->setBoxData(boxData.begin(), boxData.end());
+
+	auto sphere = std::make_unique<Shape>(device.get(), "data/sphere.obj", cameraDataResource.first.get(), FRAME_BUFFER_FORMAT);
+	std::vector<ShapeData> sphereData = {
+		{XMMatrixTranslation(-5.f,0.f,0.f),{1.f,0.f,0.f}},
+		{XMMatrixTranslation(0.f,-5.f,0.f),{0.f,1.f,0.f}},
+	};
+	sphere->setBoxData(sphereData.begin(), sphereData.end());
 
 	//
 	// Imgui‚ÌÝ’è
@@ -205,10 +212,11 @@ int main()
 		commandManager->get_list()->RSSetScissorRects(1, &scissorRect);
 
 		//
-		// box‚Ì•`‰æ
+		// •`‰æ
 		//
 
 		box->draw(commandManager->get_list());
+		sphere->draw(commandManager->get_list());
 
 		//
 		// Imgui‚Ì•`‰æ

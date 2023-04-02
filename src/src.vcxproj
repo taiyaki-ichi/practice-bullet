@@ -202,17 +202,17 @@
     <ClInclude Include="..\external\imgui\imstb_textedit.h" />
     <ClInclude Include="..\external\imgui\imstb_truetype.h" />
     <ClInclude Include="obj_loader.hpp" />
-    <ClInclude Include="Box.hpp" />
+    <ClInclude Include="Shape.hpp" />
     <ClInclude Include="CameraData.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="shader\BoxPixelShader.hlsl">
+    <FxCompile Include="shader\ShapePixelShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="shader\BoxVertexShader.hlsl">
+    <FxCompile Include="shader\ShapeVertexShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
@@ -220,8 +220,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shader\CameraData.hlsli" />
-    <None Include="shader\BoxHeader.hlsli" />
+    <None Include="shader\ShapeHeader.hlsli" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
