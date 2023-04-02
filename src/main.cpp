@@ -5,7 +5,7 @@
 #include<DirectXMath.h>
 #include<fstream>
 #include"obj_loader.hpp"
-
+#include"Box.hpp"
 
 using namespace DirectX;
 
@@ -16,13 +16,6 @@ constexpr DXGI_FORMAT FRAME_BUFFER_FORMAT = DXGI_FORMAT_R8G8B8A8_UNORM;
 constexpr std::size_t FRAME_BUFFER_NUM = 2;
 
 constexpr DXGI_FORMAT DEPTH_BUFFER_FORMAT = DXGI_FORMAT_D32_FLOAT;
-
-
-struct CameraData
-{
-	XMMATRIX viewProj{};
-};
-
 
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -69,39 +62,6 @@ int main()
 	auto cameraDataResource = dx12w::create_commited_upload_buffer_resource(device.get(), dx12w::alignment<UINT64>(sizeof(CameraData), 256));
 
 
-	// 頂点シェーダ
-	auto vertexShader = []() {
-		std::ifstream shaderFile{ L"shader/VertexShader.cso",std::ios::binary };
-		return dx12w::load_blob(shaderFile);
-	}();
-
-	// ピクセルシェーダ
-	auto indexShader = []() {
-		std::ifstream shaderFile{ L"shader/PixelShader.cso",std::ios::binary };
-		return dx12w::load_blob(shaderFile);
-	}();
-
-	std::ifstream file{ "data/cube.obj" };
-	auto vertexData = load_obj(file);
-
-	// 球の頂点データ
-	auto vertexResource = [&device, &vertexData]() {
-		auto result = dx12w::create_commited_upload_buffer_resource(device.get(), sizeof(decltype(vertexData)::value_type) * vertexData.size());
-
-		float* tmp = nullptr;
-		result.first->Map(0, nullptr, reinterpret_cast<void**>(&tmp));
-		std::copy(&vertexData[0][0], &vertexData[0][0] + vertexData.size() * 6, tmp);
-		result.first->Unmap(0, nullptr);
-
-		return result;
-	}();
-
-	// pmxxの頂点バッファのビュー
-	D3D12_VERTEX_BUFFER_VIEW vertexBufferView{
-		.BufferLocation = vertexResource.first->GetGPUVirtualAddress(),
-		.SizeInBytes = static_cast<UINT>(sizeof(decltype(vertexData)::value_type) * vertexData.size()),
-		.StrideInBytes = static_cast<UINT>(sizeof(decltype(vertexData)::value_type)),
-	};
 
 	//
 	// デスクリプタヒープ
@@ -116,15 +76,6 @@ int main()
 			dx12w::create_texture2D_RTV(device.get(), frameBufferDescriptorHeapRTV.get_CPU_handle(i), frameBufferResource[i].first.get(), FRAME_BUFFER_FORMAT, 0, 0);
 	}
 
-	// フレームバッファに描画する際に使用する
-	dx12w::descriptor_heap frameBufferDescriptorHeapCBVSRVUAV{};
-	{
-		frameBufferDescriptorHeapCBVSRVUAV.initialize(device.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1);
-
-		// カメラのデータ
-		dx12w::create_CBV(device.get(), frameBufferDescriptorHeapCBVSRVUAV.get_CPU_handle(0), cameraDataResource.first.get(), dx12w::alignment<UINT64>(sizeof(CameraData), 256));
-	}
-
 	auto frameBufferDescriptorHeapDSV = dx12w::create_descriptor_heap(device.get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1);
 	dx12w::create_texture2D_DSV(device.get(), frameBufferDescriptorHeapDSV.get_CPU_handle(0), depthBuffer.first.get(), DEPTH_BUFFER_FORMAT, 0);
 
@@ -133,22 +84,16 @@ int main()
 
 
 	//
-	// ルートシグネチャ
+	// Box
 	//
 
-	// pmxのフレームバッファに描画する際のルートシグネチャ
-	auto rootSignature = dx12w::create_root_signature(device.get(), { {{/*カメラデータ*/D3D12_DESCRIPTOR_RANGE_TYPE_CBV}} }, {});
-
-
-	//
-	// グラフィックスパイプライン 
-	//
-
-	// pmxをフレームバッファに描画する際のグラフィクスパイプライン
-	auto pmx_graphics_pipeline_state = dx12w::create_graphics_pipeline(device.get(), rootSignature.get(),
-		{ { "POSITION",DXGI_FORMAT_R32G32B32_FLOAT },{ "NORMAL",DXGI_FORMAT_R32G32B32_FLOAT } },
-		{ FRAME_BUFFER_FORMAT }, { {vertexShader.data(),vertexShader.size()},{indexShader.data(),indexShader.size()} },
-		true, true, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	auto box = std::make_unique<Box>(device.get(), cameraDataResource.first.get(), FRAME_BUFFER_FORMAT);
+	std::vector<BoxData> boxData = {
+		{XMMatrixTranslation(0.f,0.f,0.f),{1.f,0.f,0.f}},
+		{XMMatrixTranslation(5.f,0.f,0.f),{0.f,1.f,0.f}},
+		{XMMatrixTranslation(0.f,5.f,0.f),{0.f,0.f,1.f}},
+	};
+	box->setBoxData(boxData.begin(), boxData.end());
 
 	//
 	// Imguiの設定
@@ -263,23 +208,11 @@ int main()
 		commandManager->get_list()->RSSetViewports(1, &viewport);
 		commandManager->get_list()->RSSetScissorRects(1, &scissorRect);
 
-
 		//
-		// オブジェクトを描画
+		// boxの描画
 		//
 
-		commandManager->get_list()->SetGraphicsRootSignature(rootSignature.get());
-		commandManager->get_list()->SetPipelineState(pmx_graphics_pipeline_state.get());
-		commandManager->get_list()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-		{
-			auto tmp = frameBufferDescriptorHeapCBVSRVUAV.get();
-			commandManager->get_list()->SetDescriptorHeaps(1, &tmp);
-		}
-		commandManager->get_list()->SetGraphicsRootDescriptorTable(0, frameBufferDescriptorHeapCBVSRVUAV.get_GPU_handle(0));
-
-		commandManager->get_list()->IASetVertexBuffers(0, 1, &vertexBufferView);
-		commandManager->get_list()->DrawInstanced(vertexData.size(), 1, 0, 0);
+		box->draw(commandManager->get_list());
 
 		//
 		// Imguiの描画

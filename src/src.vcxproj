@@ -92,6 +92,7 @@
     </Link>
     <FxCompile>
       <ObjectFileOutput>$(OutDir)%(RelativeDir)%(Filename).cso</ObjectFileOutput>
+      <ShaderModel>5.1</ShaderModel>
     </FxCompile>
     <PostBuildEvent>
       <Command>xcopy "$(ProjectDir)..\data\*" "$(OutDir)\data" /i /s /y </Command>
@@ -115,6 +116,7 @@
     </Link>
     <FxCompile>
       <ObjectFileOutput>$(OutDir)%(RelativeDir)%(Filename).cso</ObjectFileOutput>
+      <ShaderModel>5.1</ShaderModel>
     </FxCompile>
     <PostBuildEvent>
       <Command>xcopy "$(ProjectDir)..\data\*" "$(OutDir)\data" /i /s /y </Command>
@@ -136,6 +138,7 @@
     </Link>
     <FxCompile>
       <ObjectFileOutput>$(OutDir)%(RelativeDir)%(Filename).cso</ObjectFileOutput>
+      <ShaderModel>5.1</ShaderModel>
     </FxCompile>
     <PostBuildEvent>
       <Command>xcopy "$(ProjectDir)..\data\*" "$(OutDir)\data" /i /s /y </Command>
@@ -161,6 +164,7 @@
     </Link>
     <FxCompile>
       <ObjectFileOutput>$(OutDir)%(RelativeDir)%(Filename).cso</ObjectFileOutput>
+      <ShaderModel>5.1</ShaderModel>
     </FxCompile>
     <PostBuildEvent>
       <Command>xcopy "$(ProjectDir)..\data\*" "$(OutDir)\data" /i /s /y </Command>
@@ -198,15 +202,17 @@
     <ClInclude Include="..\external\imgui\imstb_textedit.h" />
     <ClInclude Include="..\external\imgui\imstb_truetype.h" />
     <ClInclude Include="obj_loader.hpp" />
+    <ClInclude Include="Box.hpp" />
+    <ClInclude Include="CameraData.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="shader\PixelShader.hlsl">
+    <FxCompile Include="shader\BoxPixelShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="shader\VertexShader.hlsl">
+    <FxCompile Include="shader\BoxVertexShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
@@ -214,7 +220,8 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shader\Header.hlsli" />
+    <None Include="shader\CameraData.hlsli" />
+    <None Include="shader\BoxHeader.hlsli" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
