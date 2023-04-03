@@ -11,6 +11,10 @@
 #include"Shape.hpp"
 #include"DebugDraw.hpp"
 
+#define _CRTDBG_MAP_ALLOC
+#include <cstdlib>
+#include <crtdbg.h>
+
 using namespace DirectX;
 
 constexpr std::size_t WINDOW_WIDTH = 960;
@@ -39,6 +43,9 @@ LRESULT CALLBACK wnd_proc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 int main()
 {
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+
+
 	auto hwnd = dx12w::create_window(L"practice-bullet", WINDOW_WIDTH, WINDOW_HEIGHT, wnd_proc);
 
 	auto device = dx12w::create_device();
@@ -385,6 +392,9 @@ int main()
 	ImGui_ImplDX12_Shutdown();
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
+
+
+	_CrtDumpMemoryLeaks();
 
 	return 0;
 }
