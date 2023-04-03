@@ -151,7 +151,7 @@ int main()
 
 		btScalar mass(0.);
 		btVector3 localInertia(0, 0, 0);
-	
+
 		//using motionstate is optional, it provides interpolation capabilities, and only synchronizes 'active' objects
 		btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
 		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, groundShape, localInertia);
@@ -191,7 +191,7 @@ int main()
 			btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
 			rbInfo.m_restitution = 1.f;
 			body1 = new btRigidBody(rbInfo);
-		
+
 			dynamicsWorld->addRigidBody(body1);
 		}
 
@@ -323,7 +323,7 @@ int main()
 
 	auto prevTime = std::chrono::system_clock::now();
 
-	float power = 0.f;
+	std::array<float, 3> power{};
 
 	//
 	// ƒƒCƒ“ƒ‹[ƒv
@@ -368,11 +368,11 @@ int main()
 		ImGui::InputFloat3("eye", &eye.x);
 		ImGui::InputFloat3("target", &target.x);
 
-		ImGui::InputFloat("impulse power", &power);
+		ImGui::InputFloat3("impulse power", &power[0]);
 
 		if (ImGui::Button("Impulse!")) {
 			body1->activate(true);
-			body1->applyCentralImpulse(btVector3(0.f, power, 0.f));
+			body1->applyCentralImpulse(btVector3(power[0], power[1], power[2]));
 		}
 
 		// Rendering
