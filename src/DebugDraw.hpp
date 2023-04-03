@@ -79,7 +79,7 @@ struct DebugDraw : public btIDebugDraw
 		XMVECTOR q{ transform.getRotation().x(),transform.getRotation().y(), transform.getRotation().z(), transform.getRotation().w() };
 
 		capsuleData.emplace_back(
-			XMMatrixScaling(radius, halfHeight, radius) * axis *
+			XMMatrixScaling(radius, (1.f + halfHeight) / 2.f, radius) * axis *
 			XMMatrixRotationQuaternion(q) * XMMatrixTranslation(transform.getOrigin().x(), transform.getOrigin().y(), transform.getOrigin().z()),
 			std::array<float, 3>{ static_cast<float>(color.x()), static_cast<float>(color.y()), static_cast<float>(color.z()) }
 		);

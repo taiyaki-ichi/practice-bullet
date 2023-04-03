@@ -163,12 +163,14 @@ int main()
 	}
 
 
+	btRigidBody* body1;
+	btRigidBody* body2;
 	{
 		//create a dynamic rigidbody
 
 		//btCollisionShape* colShape = new btBoxShape(btVector3(1,1,1));
 		// btCollisionShape* colShape = new btSphereShape(btScalar(1.));
-		btCollisionShape* colShape = new btCapsuleShape(btScalar(1.), btScalar(3.));
+		btCollisionShape* colShape = new btCapsuleShape(btScalar(1.), btScalar(4.));
 		collisionShapes.push_back(colShape);
 
 		/// Create Dynamic Objects
@@ -181,27 +183,50 @@ int main()
 		colShape->calculateLocalInertia(mass, localInertia);
 
 		{
+			startTransform.setOrigin(btVector3(2, 18, 0));
+
+			//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+			btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
+			btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
+			rbInfo.m_restitution = 1.f;
+			body1 = new btRigidBody(rbInfo);
+		
+			dynamicsWorld->addRigidBody(body1);
+		}
+
+		{
 			startTransform.setOrigin(btVector3(2, 10, 0));
 
 			//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
 			btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
 			btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
 			rbInfo.m_restitution = 1.f;
-			btRigidBody* body = new btRigidBody(rbInfo);
-		
-			dynamicsWorld->addRigidBody(body);
+			body2 = new btRigidBody(rbInfo);
+
+			dynamicsWorld->addRigidBody(body2);
 		}
 
 		{
-			startTransform.setOrigin(btVector3(2, 11, 0));
+			btTransform frameInA, frameInB;
+			frameInA = btTransform::getIdentity();
+			frameInA.setOrigin(btVector3(btScalar(0.), btScalar(-3), btScalar(0.)));
+			frameInB = btTransform::getIdentity();
+			frameInB.setOrigin(btVector3(btScalar(0.), btScalar(3), btScalar(0.)));
 
-			//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
-			btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
-			btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
-			rbInfo.m_restitution = 1.f;
-			btRigidBody* body = new btRigidBody(rbInfo);
+			btGeneric6DofSpringConstraint* pGen6DOFSpring = new btGeneric6DofSpringConstraint(*body1, *body2, frameInA, frameInB, true);
+			pGen6DOFSpring->setLinearUpperLimit(btVector3(0., 1., 0.));
+			pGen6DOFSpring->setLinearLowerLimit(btVector3(0., -1., 0.));
 
-			dynamicsWorld->addRigidBody(body);
+			pGen6DOFSpring->setAngularLowerLimit(btVector3(0.f, 0.f, -1.5f));
+			pGen6DOFSpring->setAngularUpperLimit(btVector3(0.f, 0.f, 1.5f));
+
+			dynamicsWorld->addConstraint(pGen6DOFSpring, true);
+			pGen6DOFSpring->setDbgDrawSize(btScalar(5.f));
+
+			pGen6DOFSpring->enableSpring(0, true);
+			pGen6DOFSpring->setStiffness(0, 39.478f);
+			pGen6DOFSpring->setDamping(0, 0.5f);
+			pGen6DOFSpring->setEquilibriumPoint();
 		}
 	}
 
@@ -262,6 +287,8 @@ int main()
 
 	auto prevTime = std::chrono::system_clock::now();
 
+	float power = 0.f;
+
 	//
 	// ƒƒCƒ“ƒ‹[ƒv
 	//
@@ -304,6 +331,13 @@ int main()
 
 		ImGui::InputFloat3("eye", &eye.x);
 		ImGui::InputFloat3("target", &target.x);
+
+		ImGui::InputFloat("impulse power", &power);
+
+		if (ImGui::Button("Impulse!")) {
+			body1->activate(true);
+			body1->applyCentralImpulse(btVector3(0.f, power, 0.f));
+		}
 
 		// Rendering
 		ImGui::Render();
