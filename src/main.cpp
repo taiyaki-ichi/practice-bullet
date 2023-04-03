@@ -180,14 +180,27 @@ int main()
 		btVector3 localInertia(0, 0, 0);
 		colShape->calculateLocalInertia(mass, localInertia);
 
-		startTransform.setOrigin(btVector3(2, 10, 0));
+		{
+			startTransform.setOrigin(btVector3(2, 10, 0));
 
-		//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
-		btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
-		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
-		btRigidBody* body = new btRigidBody(rbInfo);
+			//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+			btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
+			btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
+			btRigidBody* body = new btRigidBody(rbInfo);
+		
+			dynamicsWorld->addRigidBody(body);
+		}
 
-		dynamicsWorld->addRigidBody(body);
+		{
+			startTransform.setOrigin(btVector3(2, 11, 0));
+
+			//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+			btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
+			btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
+			btRigidBody* body = new btRigidBody(rbInfo);
+
+			dynamicsWorld->addRigidBody(body);
+		}
 	}
 
 	// デバック用のインスタンス割当て
