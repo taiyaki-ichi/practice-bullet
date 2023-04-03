@@ -128,7 +128,7 @@ int main()
 
 	btDiscreteDynamicsWorld* dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
 
-	dynamicsWorld->setGravity(btVector3(0, -1, 0));
+	dynamicsWorld->setGravity(btVector3(0, -9.8, 0));
 
 	///-----initialization_end-----
 
@@ -162,6 +162,30 @@ int main()
 		dynamicsWorld->addRigidBody(body);
 	}
 
+	btRigidBody* fixBox;
+	float fixBoxX = -2.f;
+	float fixBoxY = 10.f;
+	float fixBoxZ = 0.f;
+	{
+		btCollisionShape* groundShape = new btBoxShape(btVector3(btScalar(1.), btScalar(1.), btScalar(1.)));
+		collisionShapes.push_back(groundShape);
+
+		btTransform groundTransform;
+		groundTransform.setIdentity();
+		groundTransform.setOrigin(btVector3(fixBoxX, fixBoxY, fixBoxZ));
+
+		btScalar mass(0.);
+		btVector3 localInertia(0, 0, 0);
+
+		//using motionstate is optional, it provides interpolation capabilities, and only synchronizes 'active' objects
+		btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
+		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, groundShape, localInertia);
+		fixBox = new btRigidBody(rbInfo);
+
+
+		//add the body to the dynamics world
+		dynamicsWorld->addRigidBody(fixBox);
+	}
 
 	btRigidBody* body1;
 	btRigidBody* body2;
@@ -264,6 +288,29 @@ int main()
 			pGen6DOFSpring->setDamping(0, 0.5f);
 			pGen6DOFSpring->setEquilibriumPoint();
 		}
+
+		{
+			btTransform frameInA, frameInB;
+			frameInA = btTransform::getIdentity();
+			frameInA.setOrigin(btVector3(btScalar(0.), btScalar(-3), btScalar(0.)));
+			frameInB = btTransform::getIdentity();
+			frameInB.setOrigin(btVector3(btScalar(0.), btScalar(-3), btScalar(0.)));
+
+			btGeneric6DofSpringConstraint* pGen6DOFSpring = new btGeneric6DofSpringConstraint(*body3, *fixBox, frameInA, frameInB, true);
+			pGen6DOFSpring->setLinearUpperLimit(btVector3(0., 1., 0.));
+			pGen6DOFSpring->setLinearLowerLimit(btVector3(0., -1., 0.));
+
+			//pGen6DOFSpring->setAngularLowerLimit(btVector3(0.f, 0.f, -1.5f));
+			//pGen6DOFSpring->setAngularUpperLimit(btVector3(0.f, 0.f, 1.5f));
+
+			dynamicsWorld->addConstraint(pGen6DOFSpring, true);
+			pGen6DOFSpring->setDbgDrawSize(btScalar(5.f));
+
+			pGen6DOFSpring->enableSpring(0, true);
+			pGen6DOFSpring->setStiffness(0, 39.478f);
+			pGen6DOFSpring->setDamping(0, 0.5f);
+			pGen6DOFSpring->setEquilibriumPoint();
+		}
 	}
 
 	// デバック用のインスタンス割当て
@@ -313,7 +360,7 @@ int main()
 		.bottom = static_cast<LONG>(WINDOW_HEIGHT),
 	};
 
-	XMFLOAT3 eye{ 0.f,0.f,-10.f };
+	XMFLOAT3 eye{ 0.f,0.f,-20.f };
 	XMFLOAT3 target{ 0.f,0.f,0.f };
 	XMFLOAT3 up{ 0,1,0 };
 	float asspect = static_cast<float>(WINDOW_WIDTH) / static_cast<float>(WINDOW_HEIGHT);
@@ -323,7 +370,7 @@ int main()
 
 	auto prevTime = std::chrono::system_clock::now();
 
-	std::array<float, 3> power{};
+	std::array<float, 3> power{ 0.f,2.f,0.f };
 
 	//
 	// メインループ
@@ -373,6 +420,19 @@ int main()
 		if (ImGui::Button("Impulse!")) {
 			body1->activate(true);
 			body1->applyCentralImpulse(btVector3(power[0], power[1], power[2]));
+		}
+
+		ImGui::SliderFloat("fix box x", &fixBoxX, -10.f, 10.f);
+		ImGui::SliderFloat("fix box y", &fixBoxY, -10.f, 10.f);
+		ImGui::SliderFloat("fix box z", &fixBoxZ, -10.f, 10.f);
+
+		{
+			btTransform groundTransform;
+			groundTransform.setIdentity();
+			groundTransform.setOrigin(btVector3(fixBoxX, fixBoxY, fixBoxZ));
+
+			body3->activate(true);
+			fixBox->setWorldTransform(groundTransform);
 		}
 
 		// Rendering
