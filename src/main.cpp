@@ -165,6 +165,7 @@ int main()
 
 	btRigidBody* body1;
 	btRigidBody* body2;
+	btRigidBody* body3;
 	{
 		//create a dynamic rigidbody
 
@@ -207,6 +208,18 @@ int main()
 		}
 
 		{
+			startTransform.setOrigin(btVector3(2, 2, 0));
+
+			//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+			btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
+			btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
+			rbInfo.m_restitution = 1.f;
+			body3 = new btRigidBody(rbInfo);
+
+			dynamicsWorld->addRigidBody(body3);
+		}
+
+		{
 			btTransform frameInA, frameInB;
 			frameInA = btTransform::getIdentity();
 			frameInA.setOrigin(btVector3(btScalar(0.), btScalar(-3), btScalar(0.)));
@@ -214,6 +227,29 @@ int main()
 			frameInB.setOrigin(btVector3(btScalar(0.), btScalar(3), btScalar(0.)));
 
 			btGeneric6DofSpringConstraint* pGen6DOFSpring = new btGeneric6DofSpringConstraint(*body1, *body2, frameInA, frameInB, true);
+			pGen6DOFSpring->setLinearUpperLimit(btVector3(0., 1., 0.));
+			pGen6DOFSpring->setLinearLowerLimit(btVector3(0., -1., 0.));
+
+			pGen6DOFSpring->setAngularLowerLimit(btVector3(0.f, 0.f, -1.5f));
+			pGen6DOFSpring->setAngularUpperLimit(btVector3(0.f, 0.f, 1.5f));
+
+			dynamicsWorld->addConstraint(pGen6DOFSpring, true);
+			pGen6DOFSpring->setDbgDrawSize(btScalar(5.f));
+
+			pGen6DOFSpring->enableSpring(0, true);
+			pGen6DOFSpring->setStiffness(0, 39.478f);
+			pGen6DOFSpring->setDamping(0, 0.5f);
+			pGen6DOFSpring->setEquilibriumPoint();
+		}
+
+		{
+			btTransform frameInA, frameInB;
+			frameInA = btTransform::getIdentity();
+			frameInA.setOrigin(btVector3(btScalar(0.), btScalar(-3), btScalar(0.)));
+			frameInB = btTransform::getIdentity();
+			frameInB.setOrigin(btVector3(btScalar(0.), btScalar(3), btScalar(0.)));
+
+			btGeneric6DofSpringConstraint* pGen6DOFSpring = new btGeneric6DofSpringConstraint(*body2, *body3, frameInA, frameInB, true);
 			pGen6DOFSpring->setLinearUpperLimit(btVector3(0., 1., 0.));
 			pGen6DOFSpring->setLinearLowerLimit(btVector3(0., -1., 0.));
 
