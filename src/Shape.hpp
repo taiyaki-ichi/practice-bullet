@@ -13,18 +13,39 @@ struct ShapeData
 	std::array<float, 3> color{};
 };
 
-class Shape
+class ShapeResource
 {
 	dx12w::resource_and_state vertexResource{};
 	D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
 	UINT vertexNum{};
 
-	dx12w::resource_and_state boxDataConstantBuffer{};
-
-	std::vector<std::uint8_t> vertexShader{};
-	std::vector<std::uint8_t> pixelShader{};
+	dx12w::resource_and_state shapeDataConstantBuffer{};
 
 	dx12w::descriptor_heap descriptorHeapCBVSRVUAV{};
+
+	UINT shapeNum{};
+
+public:
+	ShapeResource(ID3D12Device*, char const* fileName, ID3D12Resource* cameraDataResource);
+	virtual ~ShapeResource() = default;
+	ShapeResource(ShapeResource&) = delete;
+	ShapeResource& operator=(ShapeResource const&) = delete;
+	ShapeResource(ShapeResource&&) = default;
+	ShapeResource& operator=(ShapeResource&&) = default;
+
+	template<typename Iter>
+	void setShapeData(Iter first, Iter last);
+
+	D3D12_VERTEX_BUFFER_VIEW const& getVertexBufferView() noexcept;
+	UINT getVertexNum() const noexcept;
+	dx12w::descriptor_heap& getDescriptorHeap() noexcept;
+	UINT getShapeNum() const noexcept;
+};
+
+class ShapePipeline
+{
+	std::vector<std::uint8_t> vertexShader{};
+	std::vector<std::uint8_t> pixelShader{};
 
 	dx12w::release_unique_ptr<ID3D12RootSignature> rootSignature{};
 	dx12w::release_unique_ptr<ID3D12PipelineState> graphicsPipeline{};
@@ -32,24 +53,23 @@ class Shape
 	UINT boxNum{};
 
 public:
-	Shape(ID3D12Device*, char const* fileName, ID3D12Resource* cameraDataResource, DXGI_FORMAT rendererFormat);
-	virtual ~Shape() = default;
-	Shape(Shape&) = delete;
-	Shape& operator=(Shape const&) = delete;
-	Shape(Shape&&) = default;
-	Shape& operator=(Shape&&) = default;
+	ShapePipeline(ID3D12Device*, DXGI_FORMAT rendererFormat);
+	virtual ~ShapePipeline() = default;
+	ShapePipeline(ShapePipeline&) = delete;
+	ShapePipeline& operator=(ShapePipeline const&) = delete;
+	ShapePipeline(ShapePipeline&&) = default;
+	ShapePipeline& operator=(ShapePipeline&&) = default;
 
-	template<typename Iter>
-	void setShapeData(Iter first, Iter last);
-	void draw(ID3D12GraphicsCommandList*);
+	void draw(ID3D12GraphicsCommandList*, ShapeResource& shapeResource);
 };
 
 
 //
-// 以下、定義
+// 以下、実装
 //
 
-inline Shape::Shape(ID3D12Device* device, char const* fileName, ID3D12Resource* cameraDataResource, DXGI_FORMAT rendererFormat)
+
+inline ShapeResource::ShapeResource(ID3D12Device* device, char const* fileName, ID3D12Resource* cameraDataResource)
 {
 	// 頂点データ
 	{
@@ -72,6 +92,54 @@ inline Shape::Shape(ID3D12Device* device, char const* fileName, ID3D12Resource* 
 		vertexNum = vertexData.size();
 	}
 
+	// 定数バッファ
+	{
+		shapeDataConstantBuffer = dx12w::create_commited_upload_buffer_resource(device, dx12w::alignment<UINT64>(sizeof(ShapeData), 256));
+	}
+
+	// ディスクリプタヒープ
+	{
+		descriptorHeapCBVSRVUAV.initialize(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2);
+
+		dx12w::create_CBV(device, descriptorHeapCBVSRVUAV.get_CPU_handle(0), cameraDataResource, dx12w::alignment<UINT64>(sizeof(CameraData), 256));
+		dx12w::create_CBV(device, descriptorHeapCBVSRVUAV.get_CPU_handle(1), shapeDataConstantBuffer.first.get(), dx12w::alignment<UINT64>(sizeof(ShapeData), 256));
+	}
+}
+
+template<typename Iter>
+inline void ShapeResource::setShapeData(Iter first, Iter last)
+{
+	ShapeData* shapeDataPtr = nullptr;
+	shapeDataConstantBuffer.first->Map(0, nullptr, reinterpret_cast<void**>(&shapeDataPtr));
+
+	std::copy(first, last, shapeDataPtr);
+	shapeNum = std::distance(first, last);
+}
+
+inline D3D12_VERTEX_BUFFER_VIEW const& ShapeResource::getVertexBufferView() noexcept
+{
+	return vertexBufferView;
+}
+
+inline UINT ShapeResource::getVertexNum() const noexcept
+{
+	return vertexNum;
+}
+
+inline dx12w::descriptor_heap& ShapeResource::getDescriptorHeap() noexcept
+{
+	return descriptorHeapCBVSRVUAV;
+}
+
+inline UINT ShapeResource::getShapeNum() const noexcept
+{
+	return shapeNum;
+}
+
+
+inline ShapePipeline::ShapePipeline(ID3D12Device* device, DXGI_FORMAT rendererFormat)
+{
+
 	// 頂点シェーダ
 	{
 		std::ifstream shaderFile{ L"shader/ShapeVertexShader.cso",std::ios::binary };
@@ -82,19 +150,6 @@ inline Shape::Shape(ID3D12Device* device, char const* fileName, ID3D12Resource* 
 	{
 		std::ifstream shaderFile{ L"shader/ShapePixelShader.cso",std::ios::binary };
 		pixelShader = dx12w::load_blob(shaderFile);
-	}
-
-	// 定数バッファ
-	{
-		boxDataConstantBuffer = dx12w::create_commited_upload_buffer_resource(device, dx12w::alignment<UINT64>(sizeof(ShapeData), 256));
-	}
-
-	// ディスクリプタヒープ
-	{
-		descriptorHeapCBVSRVUAV.initialize(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2);
-
-		dx12w::create_CBV(device, descriptorHeapCBVSRVUAV.get_CPU_handle(0), cameraDataResource, dx12w::alignment<UINT64>(sizeof(CameraData), 256));
-		dx12w::create_CBV(device, descriptorHeapCBVSRVUAV.get_CPU_handle(1), boxDataConstantBuffer.first.get(), dx12w::alignment<UINT64>(sizeof(ShapeData), 256));
 	}
 
 	// ルートシグネチャ
@@ -111,28 +166,18 @@ inline Shape::Shape(ID3D12Device* device, char const* fileName, ID3D12Resource* 
 	}
 }
 
-template<typename Iter>
-inline void Shape::setShapeData(Iter first, Iter last)
-{
-	ShapeData* boxDataPtr = nullptr;
-	boxDataConstantBuffer.first->Map(0, nullptr, reinterpret_cast<void**>(&boxDataPtr));
-
-	std::copy(first, last, boxDataPtr);
-	boxNum = std::distance(first, last);
-}
-
-inline void Shape::draw(ID3D12GraphicsCommandList* list)
+inline void ShapePipeline::draw(ID3D12GraphicsCommandList* list, ShapeResource& shapeResource)
 {
 	list->SetGraphicsRootSignature(rootSignature.get());
 	list->SetPipelineState(graphicsPipeline.get());
 	list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	{
-		auto tmp = descriptorHeapCBVSRVUAV.get();
+		auto tmp = shapeResource.getDescriptorHeap().get();
 		list->SetDescriptorHeaps(1, &tmp);
 	}
-	list->SetGraphicsRootDescriptorTable(0, descriptorHeapCBVSRVUAV.get_GPU_handle(0));
+	list->SetGraphicsRootDescriptorTable(0, shapeResource.getDescriptorHeap().get_GPU_handle(0));
 
-	list->IASetVertexBuffers(0, 1, &vertexBufferView);
-	list->DrawInstanced(vertexNum, boxNum, 0, 0);
+	list->IASetVertexBuffers(0, 1, &shapeResource.getVertexBufferView());
+	list->DrawInstanced(shapeResource.getVertexNum(), shapeResource.getShapeNum(), 0, 0);
 }

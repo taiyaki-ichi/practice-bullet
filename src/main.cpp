@@ -91,9 +91,11 @@ int main()
 	// Shape
 	//
 
-	auto box = std::make_unique<Shape>(device.get(), "data/box.obj", cameraDataResource.first.get(), FRAME_BUFFER_FORMAT);
-	auto sphere = std::make_unique<Shape>(device.get(), "data/sphere.obj", cameraDataResource.first.get(), FRAME_BUFFER_FORMAT);
-	auto capsule = std::make_unique<Shape>(device.get(), "data/capsule.obj", cameraDataResource.first.get(), FRAME_BUFFER_FORMAT);
+	auto box = std::make_unique<ShapeResource>(device.get(), "data/box.obj", cameraDataResource.first.get());
+	auto sphere = std::make_unique<ShapeResource>(device.get(), "data/sphere.obj", cameraDataResource.first.get());
+	auto capsule = std::make_unique<ShapeResource>(device.get(), "data/capsule.obj", cameraDataResource.first.get());
+
+	auto shapePipeline = std::make_unique<ShapePipeline>(device.get(), FRAME_BUFFER_FORMAT);
 
 	DebugDraw debugDraw{};
 	debugDraw.setDebugMode(btIDebugDraw::DBG_DrawWireframe
@@ -354,9 +356,9 @@ int main()
 		// •`‰æ
 		//
 
-		box->draw(commandManager->get_list());
-		sphere->draw(commandManager->get_list());
-		capsule->draw(commandManager->get_list());
+		shapePipeline->draw(commandManager->get_list(), *box);
+		shapePipeline->draw(commandManager->get_list(), *sphere);
+		shapePipeline->draw(commandManager->get_list(), *capsule);
 
 		//
 		// Imgui‚Ì•`‰æ
