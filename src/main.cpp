@@ -162,6 +162,27 @@ int main()
 		dynamicsWorld->addRigidBody(body);
 	}
 
+	btRigidBody* fixBox;
+	{
+		btCollisionShape* groundShape = new btBoxShape(btVector3(btScalar(1.), btScalar(1.), btScalar(1.)));
+		collisionShapes.push_back(groundShape);
+
+		btTransform groundTransform;
+		groundTransform.setIdentity();
+		groundTransform.setOrigin(btVector3(-2, 10, 0));
+
+		btScalar mass(0.);
+		btVector3 localInertia(0, 0, 0);
+
+		//using motionstate is optional, it provides interpolation capabilities, and only synchronizes 'active' objects
+		btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
+		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, groundShape, localInertia);
+		fixBox = new btRigidBody(rbInfo);
+
+
+		//add the body to the dynamics world
+		dynamicsWorld->addRigidBody(fixBox);
+	}
 
 	btRigidBody* body1;
 	btRigidBody* body2;
@@ -255,6 +276,29 @@ int main()
 
 			pGen6DOFSpring->setAngularLowerLimit(btVector3(0.f, 0.f, -1.5f));
 			pGen6DOFSpring->setAngularUpperLimit(btVector3(0.f, 0.f, 1.5f));
+
+			dynamicsWorld->addConstraint(pGen6DOFSpring, true);
+			pGen6DOFSpring->setDbgDrawSize(btScalar(5.f));
+
+			pGen6DOFSpring->enableSpring(0, true);
+			pGen6DOFSpring->setStiffness(0, 39.478f);
+			pGen6DOFSpring->setDamping(0, 0.5f);
+			pGen6DOFSpring->setEquilibriumPoint();
+		}
+
+		{
+			btTransform frameInA, frameInB;
+			frameInA = btTransform::getIdentity();
+			frameInA.setOrigin(btVector3(btScalar(0.), btScalar(-3), btScalar(0.)));
+			frameInB = btTransform::getIdentity();
+			frameInB.setOrigin(btVector3(btScalar(0.), btScalar(-3), btScalar(0.)));
+
+			btGeneric6DofSpringConstraint* pGen6DOFSpring = new btGeneric6DofSpringConstraint(*body3, *fixBox, frameInA, frameInB, true);
+			pGen6DOFSpring->setLinearUpperLimit(btVector3(0., 1., 0.));
+			pGen6DOFSpring->setLinearLowerLimit(btVector3(0., -1., 0.));
+
+			//pGen6DOFSpring->setAngularLowerLimit(btVector3(0.f, 0.f, -1.5f));
+			//pGen6DOFSpring->setAngularUpperLimit(btVector3(0.f, 0.f, 1.5f));
 
 			dynamicsWorld->addConstraint(pGen6DOFSpring, true);
 			pGen6DOFSpring->setDbgDrawSize(btScalar(5.f));
