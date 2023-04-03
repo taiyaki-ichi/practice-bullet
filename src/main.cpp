@@ -186,6 +186,7 @@ int main()
 			//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
 			btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
 			btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
+			rbInfo.m_restitution = 1.f;
 			btRigidBody* body = new btRigidBody(rbInfo);
 		
 			dynamicsWorld->addRigidBody(body);
@@ -197,6 +198,7 @@ int main()
 			//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
 			btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
 			btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
+			rbInfo.m_restitution = 1.f;
 			btRigidBody* body = new btRigidBody(rbInfo);
 
 			dynamicsWorld->addRigidBody(body);
