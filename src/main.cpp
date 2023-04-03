@@ -109,6 +109,7 @@ int main()
 		| btIDebugDraw::DBG_DrawContactPoints
 		| btIDebugDraw::DBG_DrawConstraints);
 
+
 	//
 	// Bullet
 	//
@@ -116,24 +117,18 @@ int main()
 	///collision configuration contains default setup for memory, collision setup. Advanced users can create their own configuration.
 	btDefaultCollisionConfiguration* collisionConfiguration = new btDefaultCollisionConfiguration();
 
-
 	///use the default collision dispatcher. For parallel processing you can use a diffent dispatcher (see Extras/BulletMultiThreaded)
 	btCollisionDispatcher* dispatcher = new btCollisionDispatcher(collisionConfiguration);
-
 
 	///btDbvtBroadphase is a good general purpose broadphase. You can also try out btAxis3Sweep.
 	btBroadphaseInterface* overlappingPairCache = new btDbvtBroadphase();
 
-
 	///the default constraint solver. For parallel processing you can use a different solver (see Extras/BulletMultiThreaded)
 	btSequentialImpulseConstraintSolver* solver = new btSequentialImpulseConstraintSolver;
 
-
 	btDiscreteDynamicsWorld* dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
 
-
 	dynamicsWorld->setGravity(btVector3(0, -1, 0));
-
 
 	///-----initialization_end-----
 
@@ -142,35 +137,20 @@ int main()
 	//make sure to re-use collision shapes among rigid bodies whenever possible!
 	btAlignedObjectArray<btCollisionShape*> collisionShapes;
 
-
 	///create a few basic rigid bodies
-
 
 	//the ground is a cube of side 100 at position y = -56.
 	//the sphere will hit it at y = -6, with center at -5
 	{
 		btCollisionShape* groundShape = new btBoxShape(btVector3(btScalar(50.), btScalar(50.), btScalar(50.)));
-
-
 		collisionShapes.push_back(groundShape);
-
 
 		btTransform groundTransform;
 		groundTransform.setIdentity();
 		groundTransform.setOrigin(btVector3(0, -56, 0));
 
-
 		btScalar mass(0.);
-
-
-		//rigidbody is dynamic if and only if mass is non zero, otherwise static
-		bool isDynamic = (mass != 0.f);
-
-
 		btVector3 localInertia(0, 0, 0);
-		if (isDynamic)
-			groundShape->calculateLocalInertia(mass, localInertia);
-
 
 		//using motionstate is optional, it provides interpolation capabilities, and only synchronizes 'active' objects
 		btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
@@ -183,15 +163,16 @@ int main()
 	}
 
 
+	btRigidBody* body1;
+	btRigidBody* body2;
+	btRigidBody* body3;
 	{
 		//create a dynamic rigidbody
 
-
 		//btCollisionShape* colShape = new btBoxShape(btVector3(1,1,1));
 		// btCollisionShape* colShape = new btSphereShape(btScalar(1.));
-		btCollisionShape* colShape = new btCapsuleShape(btScalar(1.), btScalar(3.));
+		btCollisionShape* colShape = new btCapsuleShape(btScalar(1.), btScalar(4.));
 		collisionShapes.push_back(colShape);
-
 
 		/// Create Dynamic Objects
 		btTransform startTransform;
@@ -199,31 +180,95 @@ int main()
 		startTransform.setRotation(btQuaternion(0.f, 0.f, 0.5f, 1.f));
 
 		btScalar mass(1.f);
-
-
-		//rigidbody is dynamic if and only if mass is non zero, otherwise static
-		bool isDynamic = (mass != 0.f);
-
-
 		btVector3 localInertia(0, 0, 0);
-		if (isDynamic)
-			colShape->calculateLocalInertia(mass, localInertia);
+		colShape->calculateLocalInertia(mass, localInertia);
 
+		{
+			startTransform.setOrigin(btVector3(2, 18, 0));
 
-		startTransform.setOrigin(btVector3(2, 10, 0));
+			//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+			btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
+			btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
+			rbInfo.m_restitution = 1.f;
+			body1 = new btRigidBody(rbInfo);
 
+			dynamicsWorld->addRigidBody(body1);
+		}
 
-		//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
-		btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
-		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
-		btRigidBody* body = new btRigidBody(rbInfo);
+		{
+			startTransform.setOrigin(btVector3(2, 10, 0));
 
+			//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+			btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
+			btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
+			rbInfo.m_restitution = 1.f;
+			body2 = new btRigidBody(rbInfo);
 
-		dynamicsWorld->addRigidBody(body);
+			dynamicsWorld->addRigidBody(body2);
+		}
+
+		{
+			startTransform.setOrigin(btVector3(2, 2, 0));
+
+			//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+			btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
+			btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
+			rbInfo.m_restitution = 1.f;
+			body3 = new btRigidBody(rbInfo);
+
+			dynamicsWorld->addRigidBody(body3);
+		}
+
+		{
+			btTransform frameInA, frameInB;
+			frameInA = btTransform::getIdentity();
+			frameInA.setOrigin(btVector3(btScalar(0.), btScalar(-3), btScalar(0.)));
+			frameInB = btTransform::getIdentity();
+			frameInB.setOrigin(btVector3(btScalar(0.), btScalar(3), btScalar(0.)));
+
+			btGeneric6DofSpringConstraint* pGen6DOFSpring = new btGeneric6DofSpringConstraint(*body1, *body2, frameInA, frameInB, true);
+			pGen6DOFSpring->setLinearUpperLimit(btVector3(0., 1., 0.));
+			pGen6DOFSpring->setLinearLowerLimit(btVector3(0., -1., 0.));
+
+			pGen6DOFSpring->setAngularLowerLimit(btVector3(0.f, 0.f, -1.5f));
+			pGen6DOFSpring->setAngularUpperLimit(btVector3(0.f, 0.f, 1.5f));
+
+			dynamicsWorld->addConstraint(pGen6DOFSpring, true);
+			pGen6DOFSpring->setDbgDrawSize(btScalar(5.f));
+
+			pGen6DOFSpring->enableSpring(0, true);
+			pGen6DOFSpring->setStiffness(0, 39.478f);
+			pGen6DOFSpring->setDamping(0, 0.5f);
+			pGen6DOFSpring->setEquilibriumPoint();
+		}
+
+		{
+			btTransform frameInA, frameInB;
+			frameInA = btTransform::getIdentity();
+			frameInA.setOrigin(btVector3(btScalar(0.), btScalar(-3), btScalar(0.)));
+			frameInB = btTransform::getIdentity();
+			frameInB.setOrigin(btVector3(btScalar(0.), btScalar(3), btScalar(0.)));
+
+			btGeneric6DofSpringConstraint* pGen6DOFSpring = new btGeneric6DofSpringConstraint(*body2, *body3, frameInA, frameInB, true);
+			pGen6DOFSpring->setLinearUpperLimit(btVector3(0., 1., 0.));
+			pGen6DOFSpring->setLinearLowerLimit(btVector3(0., -1., 0.));
+
+			pGen6DOFSpring->setAngularLowerLimit(btVector3(0.f, 0.f, -1.5f));
+			pGen6DOFSpring->setAngularUpperLimit(btVector3(0.f, 0.f, 1.5f));
+
+			dynamicsWorld->addConstraint(pGen6DOFSpring, true);
+			pGen6DOFSpring->setDbgDrawSize(btScalar(5.f));
+
+			pGen6DOFSpring->enableSpring(0, true);
+			pGen6DOFSpring->setStiffness(0, 39.478f);
+			pGen6DOFSpring->setDamping(0, 0.5f);
+			pGen6DOFSpring->setEquilibriumPoint();
+		}
 	}
 
 	// デバック用のインスタンス割当て
 	dynamicsWorld->setDebugDrawer(&debugDraw);
+
 
 	//
 	// Imguiの設定
@@ -278,6 +323,8 @@ int main()
 
 	auto prevTime = std::chrono::system_clock::now();
 
+	std::array<float, 3> power{};
+
 	//
 	// メインループ
 	//
@@ -320,6 +367,13 @@ int main()
 
 		ImGui::InputFloat3("eye", &eye.x);
 		ImGui::InputFloat3("target", &target.x);
+
+		ImGui::InputFloat3("impulse power", &power[0]);
+
+		if (ImGui::Button("Impulse!")) {
+			body1->activate(true);
+			body1->applyCentralImpulse(btVector3(power[0], power[1], power[2]));
+		}
 
 		// Rendering
 		ImGui::Render();

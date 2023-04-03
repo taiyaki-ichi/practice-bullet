@@ -4,7 +4,8 @@ VSOutput main(float4 pos : POSITION, float4 normal : NORMAL, uint instanceId : S
 {
 	VSOutput output;
 	output.position = mul(cameraData.viewProj, mul(boxData[instanceId].transform, pos));
-	output.normal = normal;
+	normal.w = 0.f;
+	output.normal = normalize(mul(boxData[instanceId].transform, normal));
 	output.instanceId = instanceId;
 
 	return output;
