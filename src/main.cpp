@@ -269,9 +269,9 @@ int main()
 		{
 			btTransform frameInA, frameInB;
 			frameInA = btTransform::getIdentity();
-			frameInA.setOrigin(btVector3(btScalar(0.), btScalar(-3), btScalar(0.)));
+			frameInA.setOrigin(btVector3(btScalar(0.), btScalar(-1), btScalar(0.)));
 			frameInB = btTransform::getIdentity();
-			frameInB.setOrigin(btVector3(btScalar(0.), btScalar(3), btScalar(0.)));
+			frameInB.setOrigin(btVector3(btScalar(0.), btScalar(1), btScalar(0.)));
 
 			btGeneric6DofSpringConstraint* pGen6DOFSpring = new btGeneric6DofSpringConstraint(*body2, *body3, frameInA, frameInB, true);
 			pGen6DOFSpring->setLinearUpperLimit(btVector3(0., 1., 0.));
@@ -285,6 +285,17 @@ int main()
 
 			pGen6DOFSpring->enableSpring(0, true);
 			pGen6DOFSpring->setStiffness(0, 39.478f);
+			pGen6DOFSpring->enableSpring(1, true);
+			pGen6DOFSpring->setStiffness(1, 39.478f);
+			pGen6DOFSpring->enableSpring(2, true);
+			pGen6DOFSpring->setStiffness(2, 39.478f);
+			pGen6DOFSpring->enableSpring(3, true);
+			pGen6DOFSpring->setStiffness(3, 39.478f);
+			pGen6DOFSpring->enableSpring(4, true);
+			pGen6DOFSpring->setStiffness(4, 39.478f);
+			pGen6DOFSpring->enableSpring(5, true);
+			pGen6DOFSpring->setStiffness(5, 39.478f);
+
 			pGen6DOFSpring->setDamping(0, 0.5f);
 			pGen6DOFSpring->setEquilibriumPoint();
 		}
